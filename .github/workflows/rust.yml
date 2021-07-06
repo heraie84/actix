@@ -1,4 +1,4 @@
-name: Rust
+name: Tests
 
 on:
   push:
@@ -14,9 +14,28 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
     steps:
     - uses: actions/checkout@v2
+    - name: Install diesel_cli
+      run: cargo install diesel_cli --no-default-features --features postgres
+    - name: Run migrations
+      run: diesel migration run
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
     - name: Build
       run: cargo build --verbose
+    - name: Copy .env file
+      run: cp .env.github .env
     - name: Run tests
       run: cargo test --verbose
